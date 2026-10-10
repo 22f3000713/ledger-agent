@@ -23,8 +23,12 @@ df = (df.sort_values("updated_at")
 
 # Convert money to USD (multiply: usd_per_unit).
 df["usd"] = df["amount"] * df["currency"].map(RATES)
-df["year"] = df["created_at"].dt.year
-df["month"] = df["created_at"].dt.month
+# Business dates use Asia/Kolkata (per the API notes), so months are in IST.
+ist = df["created_at"].dt.tz_convert("Asia/Kolkata")
+df["year"] = ist.dt.year
+df["month"] = ist.dt.month
+df["day"] = ist.dt.day
+df["date"] = ist.dt.strftime("%Y-%m-%d")
 
 # ---------- 2. THE PROMPT ----------
 SYSTEM = f"""You convert questions about Acme Appliances' order ledger into pandas code.
@@ -33,7 +37,7 @@ A DataFrame `df` exists (one row per order, already de-duplicated). Columns:
 id, customer (e.g. 'C1169'), region (North/South/East/West/Central),
 product, qty, unit_price, amount (in the order's own currency), currency,
 status, created_at (UTC datetime), updated_at, usd (amount converted to USD),
-year (int), month (int 1-12).
+year, month (1-12), day, date ('YYYY-MM-DD') -- all in Asia/Kolkata business time.
 
 Allowed values:
 - status: {sorted(df.status.unique())}
@@ -46,7 +50,7 @@ Business rules:
 - "Refunds" = orders with status == 'refunded' (refund amount = their `usd`).
 - status == 'void' orders are cancelled: never count them as revenue or refunds.
 - Always use the `usd` column for money, never `amount`, unless asked for local currency.
-- Filter months with the `year` and `month` columns.
+- Business dates use Asia/Kolkata. Filter dates with the `year`, `month`, `day`, `date` columns (already IST); never use created_at for date filtering.
 - Use product names exactly as in the allowed values (fix capitalisation/spelling).
 - "Orders"/"how many" = count of rows. "Units" = sum of `qty`.
 
@@ -56,7 +60,7 @@ Reply with ONLY Python code, no markdown, no comments. The last line must assign
 # ---------- 3. ASK THE LLM ----------
 LLM_URL = "https://aipipe.org/openai/v1/chat/completions"
 LLM_KEY = os.environ.get("LLM_KEY", "")
-LLM_MODEL = "gpt-4.1-mini"
+LLM_MODEL = "gpt-4o-mini"
 
 def ask_llm(question, error=None):
     msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
