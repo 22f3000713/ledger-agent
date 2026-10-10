@@ -56,7 +56,7 @@ Reply with ONLY Python code, no markdown, no comments. The last line must assign
 # ---------- 3. ASK THE LLM ----------
 LLM_URL = "https://aipipe.org/openai/v1/chat/completions"
 LLM_KEY = os.environ.get("LLM_KEY", "")
-LLM_MODEL = "gpt-5.6-luna"
+LLM_MODEL = "gpt-4.1-mini"
 
 def ask_llm(question, error=None):
     msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
